@@ -3,8 +3,8 @@ package cn.synzbtech.ota.core;
 public class Api {
 
     //服务地址
-    public static final String host = "http://192.168.1.15:8081/";
-    public static final String zkHost = "192.168.1.15:2181/ota/device";
+    public static final String host = "http://192.168.1.11:8081/";
+    public static final String zkHost = "192.168.1.11:2181/ota/device";
     public static class URL {
         public static final String GET_APK_VERSION = "api/apk/version";
         public static final String GET_OAT_VERSION = "api/pack/version";

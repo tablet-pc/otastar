@@ -19,6 +19,7 @@ import cn.synzbtech.ota.core.DeviceInfoWrapper;
 import cn.synzbtech.ota.core.entity.DeviceEntity;
 import cn.synzbtech.ota.core.entity.DeviceInfo;
 import cn.synzbtech.ota.core.entity.ResultWrapper;
+import cn.synzbtech.ota.core.network.HyyHttpClient;
 import cn.synzbtech.ota.utils.DeviceUtils;
 import okhttp3.MediaType;
 
@@ -80,19 +81,12 @@ public class MonitoringService extends Service {
         deviceEntity.setWifiMac(wifiMac);
         deviceEntity.setDetail(DeviceInfoWrapper.deviceInfo);
 
-        String requestBody = JSON.toJSONString(deviceEntity);
-
-        final RequestParams params = new RequestParams();
-        params.setUri(Api.host + "api/device/add");
-        params.addHeader("Content-Type", "application/json;charset=UTF-8");
-        params.addHeader("Connection", "close");
-        params.setBodyContent(requestBody);
-        try {
-            String responseJSON = x.http().postSync(params, String.class);
+        String responseJSON = HyyHttpClient.getInstance().post(HyyHttpClient.URI.PUSH_DEVICE_INFO, deviceEntity, true);
+        if(responseJSON!=null) {
             Log.d(TAG, "push device info success >>> ");
             Log.d(TAG, responseJSON);
-        } catch (Throwable e){
-            Log.e(TAG, "push device info failed", e);
+        } else{
+            Log.d(TAG, "push device info failed >>>");
         }
     }
 

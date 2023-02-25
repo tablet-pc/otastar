@@ -165,7 +165,7 @@ public class HyyHttpClient {
      *
      */
     public static class URI {
-        public static final String PUSH_DEVICE_INFO = "api/device/add";
+        public static final String PUSH_DEVICE_INFO = "device/save";
     }
 
 }
