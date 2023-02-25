@@ -20,7 +20,7 @@ public class AppConfig {
 }
 ```
 
-## How install as system application
+## How to install as system application
 
 ```
 adb root
