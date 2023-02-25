@@ -166,6 +166,9 @@ public class HyyHttpClient {
      */
     public static class URI {
         public static final String PUSH_DEVICE_INFO = "device/save";
+        public static final String GET_APK_VERSION = "apk/version";
+        public static final String GET_OAT_VERSION = "ota/version";
+        public static final String GET_UPDATE_VERSION = "update/version";
     }
 
 }

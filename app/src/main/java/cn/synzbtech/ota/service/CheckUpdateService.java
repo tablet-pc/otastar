@@ -11,9 +11,13 @@ import androidx.annotation.Nullable;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 
+import org.apache.commons.lang3.StringUtils;
 import org.greenrobot.eventbus.EventBus;
 import org.xutils.http.RequestParams;
 import org.xutils.x;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import cn.synzbtech.ota.OtaApplication;
 import cn.synzbtech.ota.core.Api;
@@ -21,6 +25,8 @@ import cn.synzbtech.ota.core.DeviceInfoWrapper;
 import cn.synzbtech.ota.core.entity.ApkVersion;
 import cn.synzbtech.ota.core.entity.OtaVersion;
 import cn.synzbtech.ota.core.entity.ResultWrapper;
+import cn.synzbtech.ota.core.entity.UpdateVersion;
+import cn.synzbtech.ota.core.network.HyyHttpClient;
 import cn.synzbtech.ota.ui.MainActivity;
 import cn.synzbtech.ota.utils.NotificationUtils;
 import cn.synzbtech.ota.core.entity.ApkUpgradeMainEvent;
@@ -77,10 +83,14 @@ public class CheckUpdateService extends Service {
         private int apkState = 0; // app apk 升级状态
 
         private int packState = 0; // 系统 ota 升级状态
-
         private int CHECK_INTERVAL = 1000 * 10; // 升级检测时间间隔。
 
+        volatile boolean upgradeRunning = true;
 
+        /**
+         * If the server cancels the apk upgrade, you need to use this method to check again and again
+         * @return
+         */
         private ApkVersion getApkVersion() {
 
             if(DeviceInfoWrapper.deviceInfo ==null) {
@@ -88,40 +98,66 @@ public class CheckUpdateService extends Service {
                 return null;
             }
 
-            RequestParams params = new RequestParams(Api.host + Api.URL.GET_APK_VERSION);
-            params.addQueryStringParameter("wifiMac", DeviceInfoWrapper.deviceInfo.getWifiMacAddress());
-            try {
-                String responseJSON = x.http().postSync(params, String.class);
-                ResultWrapper<ApkVersion> resultWrapper = JSON.parseObject(responseJSON, new TypeReference<ResultWrapper<ApkVersion>>(){}.getType());
-                Log.d(TAG, "response code " + resultWrapper.getCode()+" message " + resultWrapper.getMsg());
-                return resultWrapper.getData();
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
+            Map<String, Object> params = new HashMap<>();
+            params.put("wifiMac", DeviceInfoWrapper.deviceInfo.getWifiMacAddress());
+            String responseJSON = HyyHttpClient.getInstance().post(HyyHttpClient.URI.GET_APK_VERSION, params, false);
+            if(StringUtils.isEmpty(responseJSON)){
+                Log.d(TAG, "apk >>> request apk version failed");
                 return null;
             }
+
+            ResultWrapper<ApkVersion> resultWrapper = JSON.parseObject(responseJSON, new TypeReference<ResultWrapper<ApkVersion>>(){}.getType());
+            Log.d(TAG, "apk >>> response code " + resultWrapper.getCode()+" message " + resultWrapper.getMsg());
+            return resultWrapper.getData();
         }
 
+        /**
+         * If the server cancels the apk upgrade, you need to use this method to check again and again
+         * @return
+         */
         private OtaVersion getOtaVersion() {
             if(DeviceInfoWrapper.deviceInfo ==null) {
-                Log.d(TAG, "device info is null,can not get ota version");
+                Log.d(TAG, "device info is null,can not get apk version");
+
                 return null;
             }
 
-            RequestParams params = new RequestParams(Api.host + Api.URL.GET_OAT_VERSION);
-            params.addQueryStringParameter("wifiMac", DeviceInfoWrapper.deviceInfo.getWifiMacAddress());
-            try {
-                String responseJSON = x.http().postSync(params, String.class);
-                ResultWrapper<OtaVersion> resultWrapper = JSON.parseObject(responseJSON, new TypeReference<ResultWrapper<OtaVersion>>(){}.getType());
-                Log.d(TAG, "response code " + resultWrapper.getCode()+" message " + resultWrapper.getMsg());
-                return resultWrapper.getData();
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
+            Map<String, Object> params = new HashMap<>();
+            params.put("wifiMac", DeviceInfoWrapper.deviceInfo.getWifiMacAddress());
+            String responseJSON = HyyHttpClient.getInstance().post(HyyHttpClient.URI.GET_OAT_VERSION, params, false);
+            if(StringUtils.isEmpty(responseJSON)){
+                Log.d(TAG, "ota >>> request ota version failed");
                 return null;
             }
+
+            ResultWrapper<OtaVersion> resultWrapper = JSON.parseObject(responseJSON, new TypeReference<ResultWrapper<ApkVersion>>(){}.getType());
+            Log.d(TAG, "ota >>> response code " + resultWrapper.getCode()+" message " + resultWrapper.getMsg());
+            return resultWrapper.getData();
         }
 
-        volatile boolean upgradeRunning = true;
+        /**
+         * Merge apk and ota upgrade check requests. Reduce the number of requests to the server.
+         * However, checking for cancellation still requires a separate request for apk {@see getApkVersion} or ota {@see getOtaVersion}
+         *
+         * @return
+         */
+        private UpdateVersion getUpdateVersion(){
+            if(DeviceInfoWrapper.deviceInfo ==null) {
+                Log.d(TAG, "device info is null,can not get apk version");
+                return null;
+            }
+            Map<String, Object> params = new HashMap<>();
+            params.put("wifiMac", DeviceInfoWrapper.deviceInfo.getWifiMacAddress());
+            String responseJSON = HyyHttpClient.getInstance().post(HyyHttpClient.URI.GET_UPDATE_VERSION, params, false);
+            if(StringUtils.isEmpty(responseJSON)){
+                Log.d(TAG, "check apk and ota >>> request ota version failed");
+                return null;
+            }
 
+            ResultWrapper<UpdateVersion> resultWrapper = JSON.parseObject(responseJSON, new TypeReference<ResultWrapper<UpdateVersion>>(){}.getType());
+            Log.d(TAG, "check apk and ota >>> response code " + resultWrapper);
+            return resultWrapper.getData();
+        }
         @Override
         public void run() {
 
@@ -174,7 +210,11 @@ public class CheckUpdateService extends Service {
                         continue;
                     }
 
-                    ApkVersion apkVersion = getApkVersion();
+                    UpdateVersion updateVersion = getUpdateVersion();
+                    if(updateVersion==null){
+                        continue;
+                    }
+                    ApkVersion apkVersion = updateVersion.getApkVersion();
                     if(apkVersion!=null) {
                         OtaApplication.apkUpgradeState = Api.UpgradeState.NEED_DOWNLOAD;
                         PreferenceUtils.getInstance().setApkUpgradeState(Api.UpgradeState.NEED_DOWNLOAD);
@@ -188,13 +228,15 @@ public class CheckUpdateService extends Service {
                         } else {
                             NotificationUtils.getInstance().sendNotification("升级通知", "有版本，请前往升级", "");
                         }
+                    } else{
+                        Log.d(TAG, "No apk upgrade required");
                     }
 
                     if(OtaApplication.apkUpgradeState != Api.UpgradeState.CHECK) {
                         continue;
                     }
 
-                    OtaVersion packVersion = getOtaVersion();
+                    OtaVersion packVersion = updateVersion.getOtaVersion();
                     if(packVersion!=null) {
                         //下载pack包
                         OtaApplication.packUpgradeState =  Api.UpgradeState.NEED_DOWNLOAD;
@@ -209,6 +251,8 @@ public class CheckUpdateService extends Service {
                         } else {
                             NotificationUtils.getInstance().sendNotification("升级通知", "有新OTA版本，请前往升级", "");
                         }
+                    } else{
+                        Log.d(TAG, "No ota upgrade required");
                     }
 
                 } catch (InterruptedException e) {
