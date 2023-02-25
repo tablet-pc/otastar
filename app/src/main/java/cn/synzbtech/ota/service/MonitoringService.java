@@ -82,7 +82,6 @@ public class MonitoringService extends Service {
 
         String requestBody = JSON.toJSONString(deviceEntity);
 
-
         final RequestParams params = new RequestParams();
         params.setUri(Api.host + "api/device/add");
         params.addHeader("Content-Type", "application/json;charset=UTF-8");

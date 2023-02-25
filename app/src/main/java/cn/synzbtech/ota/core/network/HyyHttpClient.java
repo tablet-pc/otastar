@@ -1,13 +1,17 @@
 package cn.synzbtech.ota.core.network;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.alibaba.fastjson.JSON;
+
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import cn.synzbtech.ota.AppConfig;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
@@ -31,7 +35,26 @@ public class HyyHttpClient {
     public String APPID = "1629375064388136961";
     public String SECRET_EY = "ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SmhjSEJKWkNJNklqRTJNamt6TnpVd05qUXpPRGd4TXpZNU5qRWlMQ0oxYzJWeVRtRnRaU0k2SW1Ga2JXbHVJaXdpWlhod0lqb3lORFkyTWpJMk5qWXlMQ0oxYzJWeVNXUWlPaUl4SW4wLm5LVXBjZU9icXlzRFRZOElNb1E3TnRkeU5PYmxMRVZJUWRobHZzeERtalE=";
 
-    public HyyHttpClient(){
+    private static HyyHttpClient mInstance;
+
+    public static synchronized HyyHttpClient getInstance(){
+
+        if(mInstance==null){
+            mInstance = new HyyHttpClient();
+            if(StringUtils.isNotEmpty(AppConfig.HOST)){
+                mInstance.host(AppConfig.HOST);
+            }
+            if(StringUtils.isNotEmpty(AppConfig.APPID)){
+                mInstance.appid(AppConfig.APPID);
+            }
+            if(StringUtils.isNotEmpty(AppConfig.SECRET_KEY)){
+                mInstance.secretKey(AppConfig.SECRET_KEY);
+            }
+        }
+        return mInstance;
+    }
+
+    private HyyHttpClient(){
 
     }
 
@@ -142,7 +165,7 @@ public class HyyHttpClient {
      *
      */
     public static class URI {
-
+        public static final String PUSH_DEVICE_INFO = "api/device/add";
     }
 
 }

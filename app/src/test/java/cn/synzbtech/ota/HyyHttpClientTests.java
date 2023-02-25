@@ -10,10 +10,9 @@ import cn.synzbtech.ota.core.network.HyyHttpClient;
 public class HyyHttpClientTests {
 
 
-
     @Test
     public void testHttpClientGet() {
-        HyyHttpClient hyyHttpClient = new HyyHttpClient();
+        HyyHttpClient hyyHttpClient = HyyHttpClient.getInstance();
         Map<String, Object> params = new HashMap<>();
         params.put("username", "owen");
         String response = hyyHttpClient.get("get-test?id=1", params);
@@ -22,7 +21,7 @@ public class HyyHttpClientTests {
 
     @Test
     public void testHttpClientPost(){
-        HyyHttpClient hyyHttpClient = new HyyHttpClient();
+        HyyHttpClient hyyHttpClient = HyyHttpClient.getInstance();
         Map<String, Object> params = new HashMap<>();
         params.put("username", "owen");
         String response = hyyHttpClient.post("post-test?id=1", params, false);
@@ -31,7 +30,7 @@ public class HyyHttpClientTests {
 
     @Test
     public void testHttpClientPostJSON(){
-        HyyHttpClient hyyHttpClient = new HyyHttpClient();
+        HyyHttpClient hyyHttpClient = HyyHttpClient.getInstance();
         Map<String, Object> params = new HashMap<>();
         params.put("username", "owen");
         params.put("id", 1);
